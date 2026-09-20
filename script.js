@@ -1,14 +1,32 @@
-const deviceInfo={hub:'🔀 <b>ハブ（スイッチングハブ）</b>：同じLAN内の複数の機器を有線でつなぎ、データを必要な相手へ届けます。',router:'📡 <b>ルータ</b>：LANとWANなど、異なるネットワーク同士をつなぎ、データをどこへ送るか判断します。',ap:'📶 <b>アクセスポイント（AP）</b>：スマホなどの無線機器をWi-FiでLANへ接続します。'};
-document.querySelectorAll('.device-card').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.device-card').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById('deviceInfo').innerHTML=deviceInfo[b.dataset.device]}));
-
-const stage=document.getElementById('networkStage'),packet=document.getElementById('packet'),svg=document.querySelector('.links');
-function center(id){const a=document.getElementById(id).getBoundingClientRect(),s=stage.getBoundingClientRect();return{x:a.left-s.left+a.width/2,y:a.top-s.top+a.height/2}}
-function draw(){svg.innerHTML='';let pairs=[['pc','hub'],['phone','ap'],['ap','hub'],['hub','router1'],['router1','router2'],['router2','server']];pairs.forEach(([a,b])=>{let p=center(a),q=center(b),l=document.createElementNS('http://www.w3.org/2000/svg','line');Object.entries({x1:p.x,y1:p.y,x2:q.x,y2:q.y,stroke:'#8aa4ba','stroke-width':3,'stroke-dasharray':'7 5'}).forEach(([k,v])=>l.setAttribute(k,v));svg.appendChild(l)})}
-window.addEventListener('load',draw);window.addEventListener('resize',draw);
-const descriptions={pc:['PC','Webページを見たいPCが、データの送信を始めます。'],phone:['スマホ','スマホはまずWi-Fiでアクセスポイントへデータを送ります。'],ap:['アクセスポイント','無線のデータをLANへ橋渡しします。'],hub:['ハブ','同じLAN内で、データをルータへ届けます。'],router1:['学校のルータ','宛先が別ネットワークなので、WAN（インターネット）へ送り出します。'],router2:['相手側のルータ','WANから届いたデータを、相手側LANの正しい宛先へ送ります。'],server:['Webサーバ','データが目的地に到着しました。サーバは要求に応じてWebページのデータを返します。']};
-let running=false;
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const info={
+ hub:['ハブの役割','同じLANの中で複数の有線機器を接続します。教室のPCなどをまとめてつなぐイメージです。'],
+ ap:['アクセスポイントの役割','スマートフォンやタブレットを無線（Wi-Fi）でLANに接続する入口です。'],
+ router:['ルータの役割','LANとWANなど異なるネットワークを接続し、データをどこへ送るか判断します。'],
+ internet:['WAN・インターネット','離れた場所にある多数のネットワーク同士を結びます。'],
+ server:['Webサーバの役割','ブラウザなどからの要求を受け、Webページなどのデータを返します。']
+};
+$$('[data-info]').forEach(el=>el.addEventListener('click',()=>{$('#explain').innerHTML=`<h3>${info[el.dataset.info][0]}</h3><p>${info[el.dataset.info][1]}</p>`}));
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-async function send(){if(running)return;running=true;document.getElementById('sendBtn').disabled=true;const source=document.getElementById('sourceSelect').value;const route=source==='pc'?['pc','hub','router1','router2','server']:['phone','ap','hub','router1','router2','server'];packet.style.display='grid';for(let i=0;i<route.length;i++){document.querySelectorAll('.node').forEach(n=>n.classList.remove('active'));const id=route[i],p=center(id);packet.style.left=(p.x-17)+'px';packet.style.top=(p.y-17)+'px';document.getElementById(id).classList.add('active');document.getElementById('statusTitle').textContent=`STEP ${i+1}：${descriptions[id][0]}`;document.getElementById('statusText').textContent=descriptions[id][1];document.getElementById('stepCount').textContent=`${i+1} / ${route.length}`;document.getElementById('progressBar').style.width=`${(i+1)/route.length*100}%`;await sleep(i===0?600:1050)}document.getElementById('statusTitle').textContent='✅ 通信成功！';document.getElementById('statusText').textContent='LAN → ルータ → WAN → ルータ → LAN とつながることで、離れた相手とも通信できます。';running=false;document.getElementById('sendBtn').disabled=false}
-document.getElementById('sendBtn').addEventListener('click',send);document.getElementById('resetBtn').addEventListener('click',()=>{running=false;packet.style.display='none';document.querySelectorAll('.node').forEach(n=>n.classList.remove('active'));document.getElementById('statusTitle').textContent='通信を開始してみよう';document.getElementById('statusText').textContent='「通信してみる」を押すと、データ（パケット）が相手まで移動します。';document.getElementById('stepCount').textContent='0 / 0';document.getElementById('progressBar').style.width='0';document.getElementById('sendBtn').disabled=false});
-const flow=[['💻📱','端末','データを作る'],['🔀📶','LAN内の機器','同じLAN内をつなぐ'],['📡','ルータ','別ネットワークへ'],['☁️','WAN','遠くまで運ぶ'],['📡','ルータ','相手LANへ'],['🗄️','サーバ','データを受け取る']];document.getElementById('flowSummary').innerHTML=flow.map((x,i)=>`<div class="flow-item"><span>${x[0]}</span><b>${x[1]}</b><br>${x[2]}</div>${i<flow.length-1?'<div class="arrow">→</div>':''}`).join('');
-const qs=[{q:'スマホをWi-FiでLANにつなぐ機器は？',a:['ルータ','アクセスポイント','ハブ'],c:1},{q:'異なるネットワーク同士をつなぐ機器は？',a:['ルータ','アクセスポイント','ハブ'],c:0},{q:'学校内など限られた範囲のネットワークを何という？',a:['WAN','LAN','Web'],c:1}];let score=0,done=new Set();const quiz=document.getElementById('quiz');quiz.innerHTML=qs.map((q,i)=>`<div class="question"><p>Q${i+1}. ${q.q}</p><div class="answers">${q.a.map((a,j)=>`<button data-q="${i}" data-a="${j}">${a}</button>`).join('')}</div></div>`).join('');quiz.addEventListener('click',e=>{if(e.target.tagName!=='BUTTON')return;let qi=+e.target.dataset.q,ai=+e.target.dataset.a;if(done.has(qi))return;done.add(qi);if(ai===qs[qi].c){e.target.classList.add('correct');score++}else{e.target.classList.add('wrong');e.target.parentElement.children[qs[qi].c].classList.add('correct')}if(done.size===qs.length)document.getElementById('quizResult').textContent=`${score} / ${qs.length} 問正解！ ${score===qs.length?'🎉 基本をしっかり理解できています。':'上の機器カードと通信の流れをもう一度確認してみよう。'}`});
+let running=false;
+function center(el){const n=$('.network').getBoundingClientRect(),r=el.getBoundingClientRect();return{x:r.left-n.left+r.width/2,y:r.top-n.top+r.height/2}}
+async function movePacket(el){const p=$('#packet'),pos=center(el);p.style.display='block';p.style.transition='left .55s ease, top .55s ease';p.style.left=(pos.x-20)+'px';p.style.top=(pos.y-15)+'px';el.classList.add('active');await sleep(650);el.classList.remove('active')}
+function reset(){running=false;$('#packet').style.display='none';$$('.device').forEach(x=>x.classList.remove('active','failed'));$$('.line,.wan-line').forEach(x=>x.classList.remove('off'));$('#result').className='result idle';$('#result').textContent='待機中：通信をスタートしてください。';$('#log').innerHTML='<li>通信経路がここに表示されます。</li>'}
+function failVisual(s,source){if(s==='cable'&&source==='pc'){$('[data-path="pc"]').classList.add('off');$('#pc').classList.add('failed')}if(s==='ap'){$('#ap').classList.add('failed');$('[data-path="wireless"]').classList.add('off')}if(s==='router'){$('#router').classList.add('failed');$('[data-path="common"]').classList.add('off')}if(s==='wan'){$$('[data-path^="wan"]').forEach(x=>x.classList.add('off'));$('#internet').classList.add('failed')}}
+async function run(){if(running)return;reset();running=true;const source=$('#source').value,scenario=$('#scenario').value;failVisual(scenario,source);const wireless=source!=='pc';let path=wireless?[source,'ap','hub','router','internet','server']:[source,'hub','router','internet','server'];let failAt=null,msg='';
+ if(scenario==='cable'&&source==='pc'){failAt=0;msg='LANケーブルが抜けているため、PCはハブへデータを送れません。'}
+ if(scenario==='ap'&&wireless){failAt=1;msg='アクセスポイントが停止しているため、無線端末はLANに参加できません。'}
+ if(scenario==='router'){failAt=3-(wireless?0:1);msg='ルータが停止しているため、LAN内からWANへ出られません。'}
+ if(scenario==='wan'){failAt=4-(wireless?0:1);msg='WAN側で障害が起きているため、インターネット上のWebサーバまで届きません。'}
+ // Cable fault does not affect wireless devices: useful comparison.
+ $('#log').innerHTML='';
+ for(let i=0;i<path.length;i++){
+   const id=path[i],el=$('#'+id); await movePacket(el);
+   const li=document.createElement('li');li.textContent=({pc:'有線PCからデータを送信',phone:'スマートフォンからWi-Fiで送信',tablet:'タブレットからWi-Fiで送信',ap:'アクセスポイントが無線通信をLANへ橋渡し',hub:'ハブを通ってLAN内を移動',router:'ルータがWAN側へ転送',internet:'WAN（インターネット）を通過',server:'Webサーバに到着！応答データが返される'})[id];$('#log').appendChild(li);
+   if(failAt===i){el.classList.add('failed');$('#result').className='result failure';$('#result').textContent='✕ 通信失敗：'+msg;$('#packet').style.display='none';running=false;return}
+ }
+ $('#result').className='result success';$('#result').textContent='✓ 通信成功：LAN → ルータ → WAN → Webサーバまでデータが届きました。';running=false
+}
+$('#start').addEventListener('click',run);$('#reset').addEventListener('click',reset);
+$('#scenario').addEventListener('change',reset);$('#source').addEventListener('change',reset);
+$$('[data-answer]').forEach(b=>b.addEventListener('click',()=>{$('#quizResult').textContent=b.dataset.answer==='correct'?'✓ 正解！ アクセスポイントは無線端末をLANにつなぎます。':'もう一度考えよう。ヒント：Wi-Fiの電波を使う機器です。'}));

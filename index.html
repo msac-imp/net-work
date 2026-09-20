@@ -1,72 +1,113 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ネットワークの構成 | 情報Ⅰ</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ネットワークの構成｜情報Ⅰ</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-<header>
-  <div><span class="badge">情報Ⅰ</span><h1>ネットワークの構成</h1></div>
-  <p>LANとWANがつながり、情報が届くしくみを体験しよう</p>
+<header class="hero">
+  <div>
+    <p class="eyebrow">情報Ⅰ｜ネットワーク入門</p>
+    <h1>ネットワークの構成を体験しよう</h1>
+    <p>端末からWebサーバまで、データがどの機器を通って届くのか観察しよう。</p>
+  </div>
+  <div class="goal">今日の目標<br><strong>LANとWANの違いと、各機器の役割を説明できる</strong></div>
 </header>
 
 <main>
-  <section class="hero card">
-    <div><p class="eyebrow">TODAY'S GOAL</p><h2>ネットワークを構成する機器と、その役割を説明できるようになろう。</h2>
-      <p>普段使っているスマホやPCのデータは、どんな道を通って相手まで届くのでしょうか？</p></div>
-    <div class="goal-icon">🌐</div>
-  </section>
-
-  <section class="card">
-    <div class="section-title"><span>1</span><div><h2>まずは機器を知ろう</h2><p>カードをクリックすると役割を確認できます。</p></div></div>
-    <div class="device-grid">
-      <button class="device-card" data-device="hub"><span>🔀</span><strong>ハブ</strong><small>有線LANの機器をつなぐ</small></button>
-      <button class="device-card" data-device="router"><span>📡</span><strong>ルータ</strong><small>異なるネットワークをつなぐ</small></button>
-      <button class="device-card" data-device="ap"><span>📶</span><strong>アクセスポイント</strong><small>無線でLANにつなぐ</small></button>
+  <section class="control card">
+    <div>
+      <h2>① 通信実験</h2>
+      <p>送信元を選び、通信状態を変えてから「通信スタート」を押してください。</p>
     </div>
-    <div id="deviceInfo" class="info-box">👆 機器を選んでみよう</div>
-  </section>
-
-  <section class="card">
-    <div class="section-title"><span>2</span><div><h2>LANとWANを見てみよう</h2><p>学校のLANから、インターネットを通って別のLANへつながります。</p></div></div>
-    <div class="legend"><span><i class="dot lan-dot"></i>LAN：限られた範囲のネットワーク</span><span><i class="dot wan-dot"></i>WAN：離れたLAN同士をつなぐ広域ネットワーク</span></div>
-
-    <div class="network-stage" id="networkStage">
-      <div class="zone lan-zone left-zone"><div class="zone-label">学校のLAN</div>
-        <div class="node pc" id="pc"><span>💻</span><b>PC</b></div>
-        <div class="node phone" id="phone"><span>📱</span><b>スマホ</b></div>
-        <div class="node ap" id="ap"><span>📶</span><b>AP</b></div>
-        <div class="node hub" id="hub"><span>🔀</span><b>ハブ</b></div>
-        <div class="node router" id="router1"><span>📡</span><b>ルータ</b></div>
-      </div>
-      <div class="zone wan-zone"><div class="zone-label">WAN / インターネット</div><div class="cloud">☁️<b>Internet</b></div></div>
-      <div class="zone lan-zone right-zone"><div class="zone-label">相手側のLAN</div>
-        <div class="node router" id="router2"><span>📡</span><b>ルータ</b></div>
-        <div class="node server" id="server"><span>🗄️</span><b>Webサーバ</b></div>
-      </div>
-      <svg class="links" aria-hidden="true"></svg><div id="packet" class="packet">✉️</div>
-    </div>
-
     <div class="controls">
-      <label>送信する端末 <select id="sourceSelect"><option value="pc">PC（有線）</option><option value="phone">スマホ（Wi-Fi）</option></select></label>
-      <button id="sendBtn" class="primary">▶ 通信してみる</button><button id="resetBtn">↺ リセット</button>
+      <label>送信元
+        <select id="source">
+          <option value="pc">有線PC</option>
+          <option value="phone">スマートフォン</option>
+          <option value="tablet">タブレット</option>
+        </select>
+      </label>
+      <label>通信状態
+        <select id="scenario">
+          <option value="normal">正常</option>
+          <option value="cable">有線LANケーブルが抜けている</option>
+          <option value="ap">アクセスポイント停止</option>
+          <option value="router">ルータ停止</option>
+          <option value="wan">WAN障害</option>
+        </select>
+      </label>
+      <button id="start">▶ 通信スタート</button>
+      <button id="reset" class="secondary">↺ リセット</button>
     </div>
-    <div class="status-panel"><div class="status-top"><strong id="statusTitle">通信を開始してみよう</strong><span id="stepCount">0 / 0</span></div><p id="statusText">「通信してみる」を押すと、データ（パケット）が相手まで移動します。</p><div class="progress"><div id="progressBar"></div></div></div>
   </section>
 
-  <section class="card">
-    <div class="section-title"><span>3</span><div><h2>通信の流れを整理しよう</h2><p>Webページを見るときの基本的な流れです。</p></div></div>
-    <div class="flow" id="flowSummary"></div>
+  <section class="network card">
+    <div class="zone lan-zone">
+      <div class="zone-title"><span>LAN</span><small>学校・家庭など限られた範囲のネットワーク</small></div>
+      <div class="diagram">
+        <div class="device endpoint" id="pc"><div class="icon">💻</div><b>有線PC</b><small>データを送受信</small></div>
+        <div class="device endpoint" id="phone"><div class="icon">📱</div><b>スマートフォン</b><small>Wi-Fiで接続</small></div>
+        <div class="device endpoint" id="tablet"><div class="icon">▣</div><b>タブレット</b><small>Wi-Fiで接続</small></div>
+
+        <div class="line horizontal pc-hub" data-path="pc"></div>
+        <div class="line phone-ap" data-path="phone"></div>
+        <div class="line tablet-ap" data-path="tablet"></div>
+        <div class="line ap-hub" data-path="wireless"></div>
+        <div class="line hub-router" data-path="common"></div>
+
+        <button class="device infra" id="ap" data-info="ap"><div class="icon">📶</div><b>アクセスポイント</b><small>無線端末をLANへつなぐ</small></button>
+        <button class="device infra" id="hub" data-info="hub"><div class="icon">▦</div><b>ハブ</b><small>LAN内の機器をつなぐ</small></button>
+        <button class="device infra router" id="router" data-info="router"><div class="icon">⇆</div><b>ルータ</b><small>異なるネットワークをつなぐ</small></button>
+      </div>
+    </div>
+
+    <div class="zone wan-zone">
+      <div class="zone-title"><span>WAN</span><small>離れたLAN同士を結ぶ広域ネットワーク</small></div>
+      <div class="wan-diagram">
+        <div class="wan-line" data-path="wan1"></div>
+        <button class="device cloud" id="internet" data-info="internet"><div class="icon">☁</div><b>インターネット</b><small>世界中のネットワーク</small></button>
+        <div class="wan-line" data-path="wan2"></div>
+        <button class="device server" id="server" data-info="server"><div class="icon">▤</div><b>Webサーバ</b><small>Webページを返す</small></button>
+      </div>
+    </div>
+    <div id="packet" aria-hidden="true">DATA</div>
   </section>
 
-  <section class="card quiz-card">
-    <div class="section-title"><span>4</span><div><h2>理解度チェック</h2><p>機器の役割を確認してみよう。</p></div></div>
-    <div id="quiz"></div><div id="quizResult"></div>
+  <section class="status card">
+    <div>
+      <h2>② 通信の記録</h2>
+      <div id="result" class="result idle">待機中：通信をスタートしてください。</div>
+      <ol id="log"><li>通信経路がここに表示されます。</li></ol>
+    </div>
+    <aside id="explain">
+      <h3>機器をクリックして役割を確認</h3>
+      <p>ハブ・アクセスポイント・ルータ・インターネット・Webサーバをクリックできます。</p>
+    </aside>
+  </section>
+
+  <section class="learn card">
+    <h2>③ 機器と仕組みを整理</h2>
+    <div class="role-grid">
+      <article><span>▦</span><h3>ハブ</h3><p>同じLAN内の複数の有線機器を接続する。</p></article>
+      <article><span>📶</span><h3>アクセスポイント</h3><p>スマホなどの無線端末をWi-FiでLANに参加させる。</p></article>
+      <article><span>⇆</span><h3>ルータ</h3><p>LANとWANなど、異なるネットワーク間でデータの行き先を判断する。</p></article>
+      <article><span>📦</span><h3>パケット</h3><p>ネットワークではデータを小さく分けて送る。ここでは「DATA」がそのイメージ。</p></article>
+    </div>
+  </section>
+
+  <section class="quiz card">
+    <h2>④ ミニチェック</h2>
+    <p>スマートフォンをWi-FiでLANにつなぐ中心的な機器は？</p>
+    <div class="quiz-buttons">
+      <button data-answer="wrong">ハブ</button><button data-answer="correct">アクセスポイント</button><button data-answer="wrong">Webサーバ</button>
+    </div>
+    <p id="quizResult"></p>
   </section>
 </main>
-<footer>情報Ⅰ ｜ ネットワークの構成</footer>
+<footer>情報Ⅰ｜ネットワークの構成　体験教材</footer>
 <script src="script.js"></script>
 </body>
 </html>
