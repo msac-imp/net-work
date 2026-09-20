@@ -1,32 +1,25 @@
-const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
-const info={
- hub:['ハブの役割','同じLANの中で複数の有線機器を接続します。教室のPCなどをまとめてつなぐイメージです。'],
- ap:['アクセスポイントの役割','スマートフォンやタブレットを無線（Wi-Fi）でLANに接続する入口です。'],
- router:['ルータの役割','LANとWANなど異なるネットワークを接続し、データをどこへ送るか判断します。'],
- internet:['WAN・インターネット','離れた場所にある多数のネットワーク同士を結びます。'],
- server:['Webサーバの役割','ブラウザなどからの要求を受け、Webページなどのデータを返します。']
-};
-$$('[data-info]').forEach(el=>el.addEventListener('click',()=>{$('#explain').innerHTML=`<h3>${info[el.dataset.info][0]}</h3><p>${info[el.dataset.info][1]}</p>`}));
-const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-let running=false;
-function center(el){const n=$('.network').getBoundingClientRect(),r=el.getBoundingClientRect();return{x:r.left-n.left+r.width/2,y:r.top-n.top+r.height/2}}
-async function movePacket(el){const p=$('#packet'),pos=center(el);p.style.display='block';p.style.transition='left .55s ease, top .55s ease';p.style.left=(pos.x-20)+'px';p.style.top=(pos.y-15)+'px';el.classList.add('active');await sleep(650);el.classList.remove('active')}
-function reset(){running=false;$('#packet').style.display='none';$$('.device').forEach(x=>x.classList.remove('active','failed'));$$('.line,.wan-line').forEach(x=>x.classList.remove('off'));$('#result').className='result idle';$('#result').textContent='待機中：通信をスタートしてください。';$('#log').innerHTML='<li>通信経路がここに表示されます。</li>'}
-function failVisual(s,source){if(s==='cable'&&source==='pc'){$('[data-path="pc"]').classList.add('off');$('#pc').classList.add('failed')}if(s==='ap'){$('#ap').classList.add('failed');$('[data-path="wireless"]').classList.add('off')}if(s==='router'){$('#router').classList.add('failed');$('[data-path="common"]').classList.add('off')}if(s==='wan'){$$('[data-path^="wan"]').forEach(x=>x.classList.add('off'));$('#internet').classList.add('failed')}}
-async function run(){if(running)return;reset();running=true;const source=$('#source').value,scenario=$('#scenario').value;failVisual(scenario,source);const wireless=source!=='pc';let path=wireless?[source,'ap','hub','router','internet','server']:[source,'hub','router','internet','server'];let failAt=null,msg='';
- if(scenario==='cable'&&source==='pc'){failAt=0;msg='LANケーブルが抜けているため、PCはハブへデータを送れません。'}
- if(scenario==='ap'&&wireless){failAt=1;msg='アクセスポイントが停止しているため、無線端末はLANに参加できません。'}
- if(scenario==='router'){failAt=3-(wireless?0:1);msg='ルータが停止しているため、LAN内からWANへ出られません。'}
- if(scenario==='wan'){failAt=4-(wireless?0:1);msg='WAN側で障害が起きているため、インターネット上のWebサーバまで届きません。'}
- // Cable fault does not affect wireless devices: useful comparison.
- $('#log').innerHTML='';
- for(let i=0;i<path.length;i++){
-   const id=path[i],el=$('#'+id); await movePacket(el);
-   const li=document.createElement('li');li.textContent=({pc:'有線PCからデータを送信',phone:'スマートフォンからWi-Fiで送信',tablet:'タブレットからWi-Fiで送信',ap:'アクセスポイントが無線通信をLANへ橋渡し',hub:'ハブを通ってLAN内を移動',router:'ルータがWAN側へ転送',internet:'WAN（インターネット）を通過',server:'Webサーバに到着！応答データが返される'})[id];$('#log').appendChild(li);
-   if(failAt===i){el.classList.add('failed');$('#result').className='result failure';$('#result').textContent='✕ 通信失敗：'+msg;$('#packet').style.display='none';running=false;return}
- }
- $('#result').className='result success';$('#result').textContent='✓ 通信成功：LAN → ルータ → WAN → Webサーバまでデータが届きました。';running=false
-}
-$('#start').addEventListener('click',run);$('#reset').addEventListener('click',reset);
-$('#scenario').addEventListener('change',reset);$('#source').addEventListener('change',reset);
-$$('[data-answer]').forEach(b=>b.addEventListener('click',()=>{$('#quizResult').textContent=b.dataset.answer==='correct'?'✓ 正解！ アクセスポイントは無線端末をLANにつなぎます。':'もう一度考えよう。ヒント：Wi-Fiの電波を使う機器です。'}));
+const devicesEl=document.querySelector('#devices'),svg=document.querySelector('#links'),statusEl=document.querySelector('#status');
+const fromSelect=document.querySelector('#fromSelect'),toSelect=document.querySelector('#toSelect');
+let devices=[],links=[],selected=null,count=0,connectMode=true;
+const info={pc:{icon:'💻',name:'PC',cls:'pc'},phone:{icon:'📱',name:'スマホ',cls:'phone'},hub:{icon:'🔀',name:'ハブ',cls:'hub'},ap:{icon:'📡',name:'アクセスポイント',cls:'ap'},router:{icon:'📦',name:'ルータ',cls:'router'}};
+function addDevice(type){count++;const id='d'+count;const area=document.querySelector('#canvas').getBoundingClientRect();const x=35+(count%4)*125,y=80+(Math.floor((count-1)/4)%3)*105;devices.push({id,type,x:Math.min(x,area.width*.55),y});render();}
+function render(){devicesEl.innerHTML='';devices.forEach(d=>{const n=document.createElement('div');n.className=`node ${info[d.type].cls}`+(selected===d.id?' selected':'');n.dataset.id=d.id;n.style.left=d.x+'px';n.style.top=d.y+'px';n.innerHTML=`<div class="icon">${info[d.type].icon}</div><b>${info[d.type].name}</b><small>${labelFor(d)}</small>`;n.onclick=e=>{e.stopPropagation();nodeClick(d.id)};makeDraggable(n,d);devicesEl.appendChild(n)});drawLinks();updateSelects()}
+function labelFor(d){if(d.type==='router')return 'LAN ⇄ WAN';if(d.type==='ap')return 'Wi-Fi ⇄ LAN';if(d.type==='hub')return 'LAN内を接続';return d.type==='phone'?'Wi-Fi端末':'有線端末'}
+function nodeClick(id){if(!connectMode)return;if(!selected){selected=id;render();return}if(selected===id){selected=null;render();return}toggleLink(selected,id);selected=null;render()}
+function toggleLink(a,b){const i=links.findIndex(l=>(l.a===a&&l.b===b)||(l.a===b&&l.b===a));if(i>=0)links.splice(i,1);else links.push({a,b});}
+function point(id){const canvas=document.querySelector('#canvas').getBoundingClientRect();const el=id==='internet'?document.querySelector('#internet'):id==='webserver'?document.querySelector('#webserver'):document.querySelector(`[data-id="${id}"]`);const r=el.getBoundingClientRect();return{x:r.left-canvas.left+r.width/2,y:r.top-canvas.top+r.height/2}}
+function typeOf(id){if(id==='internet')return'internet';if(id==='webserver')return'server';return devices.find(d=>d.id===id)?.type}
+function drawLinks(){svg.innerHTML='';links.forEach((l,i)=>{const a=point(l.a),b=point(l.b),line=document.createElementNS('http://www.w3.org/2000/svg','line');line.setAttribute('x1',a.x);line.setAttribute('y1',a.y);line.setAttribute('x2',b.x);line.setAttribute('y2',b.y);line.dataset.index=i;line.classList.add('link');if(typeOf(l.a)==='phone'||typeOf(l.b)==='phone')line.classList.add('wifi');line.style.pointerEvents='stroke';line.onclick=()=>{links.splice(i,1);render()};svg.appendChild(line)})}
+function makeDraggable(el,d){let sx,sy,ox,oy,moved=false;el.onpointerdown=e=>{if(e.button!==0)return;sx=e.clientX;sy=e.clientY;ox=d.x;oy=d.y;moved=false;el.setPointerCapture(e.pointerId)};el.onpointermove=e=>{if(!el.hasPointerCapture(e.pointerId))return;const dx=e.clientX-sx,dy=e.clientY-sy;if(Math.abs(dx)+Math.abs(dy)>5)moved=true;if(moved){const c=document.querySelector('#canvas');d.x=Math.max(0,Math.min(c.clientWidth-108,ox+dx));d.y=Math.max(50,Math.min(c.clientHeight-82,oy+dy));el.style.left=d.x+'px';el.style.top=d.y+'px';drawLinks()}};el.onpointerup=e=>{el.releasePointerCapture(e.pointerId);if(moved)e.stopPropagation()}}
+function updateSelects(){const old=fromSelect.value;fromSelect.innerHTML='<option value="">送信元を選択</option>';devices.filter(d=>['pc','phone'].includes(d.type)).forEach(d=>fromSelect.add(new Option(`${info[d.type].name} ${d.id.slice(1)}`,d.id)));if([...fromSelect.options].some(o=>o.value===old))fromSelect.value=old}
+function neighbors(id){return links.filter(l=>l.a===id||l.b===id).map(l=>l.a===id?l.b:l.a)}
+function validEdge(a,b){const A=typeOf(a),B=typeOf(b);const pair=[A,B].sort().join('-');if(A==='phone'||B==='phone')return pair==='ap-phone';if(A==='internet'||B==='internet')return pair==='internet-router'||pair==='internet-server';if(A==='server'||B==='server')return pair==='internet-server';if(pair==='hub-pc'||pair==='hub-router'||pair==='ap-hub'||pair==='ap-router'||pair==='hub-hub'||pair==='pc-router')return true;return false}
+function findPath(start,end){const q=[[start]],seen=new Set([start]);while(q.length){const p=q.shift(),n=p[p.length-1];if(n===end)return p;for(const x of neighbors(n)){if(!seen.has(x)&&validEdge(n,x)){seen.add(x);q.push([...p,x])}}}return null}
+function explainFailure(start){const t=typeOf(start);if(t==='phone'&&!neighbors(start).some(x=>typeOf(x)==='ap'))return 'スマホは無線端末です。アクセスポイントへのWi-Fi接続が必要です。';if(!devices.some(d=>d.type==='router'))return 'LANの外（WAN）へ出るにはルータが必要です。';if(!links.some(l=>(typeOf(l.a)==='router'&&l.b==='internet')||(typeOf(l.b)==='router'&&l.a==='internet')))return 'ルータとInternetが接続されていません。LANは作れてもWANには出られません。';return '通信経路が途中で切れているか、機器の役割に合わない接続があります。線を見直してみよう。'}
+async function animate(path){document.querySelectorAll('.packet p').forEach(p=>p.classList.remove('on'));for(let i=0;i<path.length-1;i++){const l=links.findIndex(x=>(x.a===path[i]&&x.b===path[i+1])||(x.b===path[i]&&x.a===path[i+1]));if(l>=0){const line=svg.querySelector(`[data-index="${l}"]`);line?.classList.add('active');const a=point(path[i]),b=point(path[i+1]);const dot=document.createElementNS('http://www.w3.org/2000/svg','circle');dot.setAttribute('r','7');dot.classList.add('packet-dot');svg.appendChild(dot);for(let s=0;s<=20;s++){dot.setAttribute('cx',a.x+(b.x-a.x)*s/20);dot.setAttribute('cy',a.y+(b.y-a.y)*s/20);await new Promise(r=>setTimeout(r,22))}dot.remove()}if(i<4)document.querySelectorAll('.packet p')[i].classList.add('on')}document.querySelectorAll('.packet p')[4].classList.add('on')}
+document.querySelectorAll('.device-btn').forEach(b=>b.onclick=()=>addDevice(b.dataset.type));
+document.querySelector('#internet').onclick=()=>nodeClick('internet');document.querySelector('#webserver').onclick=()=>nodeClick('webserver');
+document.querySelector('#connectMode').onclick=e=>{connectMode=!connectMode;e.currentTarget.textContent=`🔗 接続モード：${connectMode?'ON':'OFF'}`;e.currentTarget.classList.toggle('off',!connectMode);selected=null;render()};
+document.querySelector('#sendBtn').onclick=async()=>{const s=fromSelect.value;if(!s){statusEl.className='status error';statusEl.textContent='まず送信元のPCまたはスマホを選んでください。';return}svg.querySelectorAll('.link').forEach(x=>x.classList.remove('active','bad'));const path=findPath(s,'webserver');if(path){statusEl.className='status success';statusEl.textContent='通信成功！ パケットが LAN → ルータ → WAN → Webサーバへ進みます。';await animate(path)}else{statusEl.className='status error';statusEl.textContent='通信できません：'+explainFailure(s)}};
+document.querySelector('#resetBtn').onclick=()=>{devices=[];links=[];selected=null;count=0;statusEl.className='status neutral';statusEl.textContent='機器を配置して、通信経路を作ってみよう。';render()};
+window.addEventListener('resize',drawLinks);render();
